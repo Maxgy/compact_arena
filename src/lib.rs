@@ -90,8 +90,8 @@
 //! recursive(None);
 //! ```
 
-use core::ops::{Index, IndexMut};
 use core::marker::PhantomData;
+use core::ops::{Index, IndexMut};
 
 /// An index into the arena. You will not directly use this type, but one of
 /// the aliases this crate provides (`Idx32`, `Idx16` or `Idx8`).
@@ -105,7 +105,7 @@ pub struct Idx<I: Copy + Clone, B> {
     tag: PhantomData<B>,
 }
 
-impl<I: Copy + Clone, B> Copy for Idx<I, B> { }
+impl<I: Copy + Clone, B> Copy for Idx<I, B> {}
 impl<I: Copy + Clone, B> Clone for Idx<I, B> {
     fn clone(&self) -> Self {
         *self
@@ -184,18 +184,18 @@ pub struct SmallArena<T, B> {
 /// ```
 #[macro_export]
 macro_rules! in_arena {
-    ($arena:ident, $e:expr) => { in_arena!($arena / 1024*1024, $e) };
-    ($arena:ident / $cap:expr, $e:expr) => {
-        {
-            struct Tag;
-            let mut tag = Tag;
-            let mut x = unsafe { compact_arena::SmallArena::new(&mut tag, $cap) };
-            {
-                let $arena = &mut x;
-                $e
-            }
-        }
+    ($arena:ident, $e:expr) => {
+        in_arena!($arena / 1024 * 1024, $e)
     };
+    ($arena:ident / $cap:expr, $e:expr) => {{
+        struct Tag;
+        let mut tag = Tag;
+        let mut x = unsafe { compact_arena::SmallArena::new(&mut tag, $cap) };
+        {
+            let $arena = &mut x;
+            $e
+        }
+    }};
 }
 
 /// Run code using a tiny arena. The indirection through this macro is
@@ -212,17 +212,16 @@ macro_rules! in_arena {
 /// ```
 #[macro_export]
 macro_rules! in_tiny_arena {
-    ($arena:ident, $e:expr) => {        {
-            #[derive(Copy, Clone)]
-            struct Tag;
+    ($arena:ident, $e:expr) => {{
+        #[derive(Copy, Clone)]
+        struct Tag;
 
-            let mut x = unsafe { compact_arena::TinyArena::new(Tag) };
-            {
-                let $arena = &mut x;
-                $e
-            }
+        let mut x = unsafe { compact_arena::TinyArena::new(Tag) };
+        {
+            let $arena = &mut x;
+            $e
         }
-    };
+    }};
 }
 
 /// Run code using a nano arena. The indirection through the macro is
@@ -239,17 +238,16 @@ macro_rules! in_tiny_arena {
 /// ```
 #[macro_export]
 macro_rules! in_nano_arena {
-    ($arena:ident, $e:expr) => {        {
-            #[derive(Copy, Clone)]
-            struct Tag;
+    ($arena:ident, $e:expr) => {{
+        #[derive(Copy, Clone)]
+        struct Tag;
 
-            let mut x = unsafe { compact_arena::NanoArena::new(Tag) };
-            {
-                let $arena = &mut x;
-                $e
-            }
+        let mut x = unsafe { compact_arena::NanoArena::new(Tag) };
+        {
+            let $arena = &mut x;
+            $e
         }
-    };
+    }};
 }
 
 impl<T, B> SmallArena<T, B> {
@@ -274,7 +272,10 @@ impl<T, B> SmallArena<T, B> {
     pub fn add(&mut self, item: T) -> Idx32<B> {
         let i = self.data.len() as u32;
         self.data.push(item);
-        Idx { index: i, tag: self.tag }
+        Idx {
+            index: i,
+            tag: self.tag,
+        }
     }
 }
 
@@ -301,13 +302,13 @@ impl<B, T> IndexMut<Idx32<B>> for SmallArena<T, B> {
 const TINY_ARENA_ITEMS: usize = 65535;
 const NANO_ARENA_ITEMS: usize = 255;
 
-pub use tiny_arena::{TinyArena, NanoArena};
+pub use tiny_arena::{NanoArena, TinyArena};
 
 #[cfg(not(feature = "uninit"))]
 mod tiny_arena {
-    use crate::{Idx16, Idx8, TINY_ARENA_ITEMS, NANO_ARENA_ITEMS};
-    use core::ops::{Index, IndexMut};
+    use crate::{Idx16, Idx8, NANO_ARENA_ITEMS, TINY_ARENA_ITEMS};
     use core::marker::PhantomData;
+    use core::ops::{Index, IndexMut};
 
     /// A "tiny" arena containing <64K elements. This variant only works with
     /// types implementing `Default`.
@@ -333,7 +334,7 @@ mod tiny_arena {
             TinyArena {
                 tag: PhantomData,
                 data: [Default::default(); TINY_ARENA_ITEMS],
-                len: 0
+                len: 0,
             }
         }
 
@@ -343,7 +344,10 @@ mod tiny_arena {
             assert!((i as usize) < TINY_ARENA_ITEMS);
             self.data[i as usize] = item;
             self.len += 1;
-            Idx16 { tag: self.tag, index: i }
+            Idx16 {
+                tag: self.tag,
+                index: i,
+            }
         }
     }
 
@@ -386,7 +390,7 @@ mod tiny_arena {
             NanoArena {
                 tag: PhantomData,
                 data: [Default::default(); NANO_ARENA_ITEMS],
-                len: 0
+                len: 0,
             }
         }
 
@@ -396,7 +400,10 @@ mod tiny_arena {
             assert!((i as usize) < NANO_ARENA_ITEMS);
             self.data[i as usize] = item;
             self.len += 1;
-            Idx8 { tag: self.tag, index: i }
+            Idx8 {
+                tag: self.tag,
+                index: i,
+            }
         }
     }
 
@@ -418,7 +425,7 @@ mod tiny_arena {
 
 #[cfg(feature = "uninit")]
 mod tiny_arena {
-    use crate::{Idx16, Idx8, TINY_ARENA_ITEMS, NANO_ARENA_ITEMS};
+    use crate::{Idx16, Idx8, NANO_ARENA_ITEMS, TINY_ARENA_ITEMS};
     use core::marker::PhantomData;
     use core::mem::{self, ManuallyDrop};
     use core::ops::{Index, IndexMut};
@@ -436,7 +443,7 @@ mod tiny_arena {
             TinyArena {
                 tag: PhantomData,
                 data: mem::uninitialized(),
-                len: 0
+                len: 0,
             }
         }
 
@@ -445,7 +452,10 @@ mod tiny_arena {
             let i = self.len;
             self.data[i as usize] = ManuallyDrop::new(item);
             self.len += 1;
-            Idx16 { tag: self.tag, index: i }
+            Idx16 {
+                tag: self.tag,
+                index: i,
+            }
         }
 
         /// dropping the arena drops all values
@@ -502,7 +512,10 @@ mod tiny_arena {
             let i = self.len;
             self.data[i as usize] = ManuallyDrop::new(item);
             self.len += 1;
-            Idx8 { tag: self.tag, index: i }
+            Idx8 {
+                tag: self.tag,
+                index: i,
+            }
         }
 
         /// dropping the arena drops all values
